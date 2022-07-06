@@ -3,28 +3,29 @@ import * as fs from 'node:fs/promises';
 export type Config = {
   name?: string,
 
-  type?: string,
+  type?: 'commonjs' | 'module',
 
   /**
    * Source file for the `main`, `module`, and `exports` entry
    */
   source?: string,
 
-  main?: string,
+  // Non-standard entry style for legacy bundlers
   module?: string,
 
-  // Main type declaration path
+  // Main entry
+  main?: string,
+
+  // Binary entries
+  bin?: string | {
+    [name: string]: string,
+  },
+
+  // TypeScript declaration for "main" entry
   types?: string,
 
   // Export maps
-  exports?: string | {
-    [module: string]: string | {
-      default?: string,
-      node?: string,
-      require?: string,
-      import?: string,
-    },
-  },
+  exports?: ConditionalExport,
 
   dependencies?: {
     [name: string]: string,
@@ -40,6 +41,31 @@ export type Config = {
     node?: string,
   },
 };
+
+// See https://nodejs.org/api/packages.html#packages_nested_conditions
+// What a mess :/
+export type ConditionalExport = (
+  | string
+  | {
+    [module: string]: ConditionalExport,
+  }
+  | {
+    'import'?: ConditionalExport,
+    'require'?: ConditionalExport,
+    'node'?: ConditionalExport,
+    'node-addons'?: ConditionalExport,
+    'default'?: ConditionalExport,
+
+    // community conditions definitions
+    // See https://nodejs.org/api/packages.html#packages_community_conditions_definitions
+    // See also https://devblogs.microsoft.com/typescript/announcing-typescript-4-7/#package-json-exports-imports-and-self-referencing
+    'types'?: ConditionalExport,
+    'deno'?: ConditionalExport,
+    'browser'?: ConditionalExport,
+    'development'?: ConditionalExport,
+    'production'?: ConditionalExport,
+  }
+);
 
 type ConfigWithOverride = Config & {
   publishConfig?: Config,
